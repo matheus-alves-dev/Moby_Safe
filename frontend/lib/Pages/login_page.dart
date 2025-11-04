@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:moby_safe/Pages/forgot_password_page.dart';
 import 'package:moby_safe/Pages/menu_principal_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:moby_safe/core/api_config.dart';
+import 'package:moby_safe/Pages/register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -101,23 +105,24 @@ class _LoginPageState extends State<LoginPage> {
                     width: double.infinity,
                     height: 48,
                     child: FilledButton(
-                      onPressed: () {
-                        // login -> se ok -> vai pro menu
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MenuPrincipalPage(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'ENTRAR',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                      onPressed: isLoading ? null : _login,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'ENTRAR',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -143,20 +148,16 @@ class _LoginPageState extends State<LoginPage> {
                   ),
 
                   // "Criar conta"
+                  // Adicione este botão abaixo do "Esqueci a senha"
                   TextButton(
                     onPressed: () {
-                      // (a tela de cadastro ainda não está pronta no PDF,
-                      // mas deixamos o botão porque ela aparece no login)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      );
                     },
-                    child: const Text(
-                      'Criar conta',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: const Text('Criar conta'),
                   ),
-
                   const SizedBox(height: 16),
                 ],
               ),
@@ -165,5 +166,65 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  bool isLoading = false;
+
+  Future<void> _login() async {
+    final email = emailCtrl.text.trim();
+    final senha = senhaCtrl.text;
+
+    if (email.isEmpty || senha.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe e-mail e senha')),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    // Para Android emulador, use 'http://10.0.2.2:3001'
+    final baseUrl = apiBaseUrl();
+    final uri = Uri.parse('$baseUrl/auth/login');
+
+    try {
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'senha': senha}),
+      );
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final token = data['token'] as String?;
+        if (token == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Resposta inválida do servidor')),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MenuPrincipalPage()),
+          );
+        }
+      } else {
+        String msg = 'Credenciais inválidas';
+        try {
+          final err = jsonDecode(resp.body);
+          if (err is Map && err['error'] is String) {
+            msg = err['error'] as String;
+          }
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha no login: $msg')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de rede: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 }
