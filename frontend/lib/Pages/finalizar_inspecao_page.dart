@@ -2,8 +2,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:moby_safe_estagio/services/rascunho_service.dart';
-import 'package:moby_safe_estagio/widgets/mobsafety_header.dart';
+import 'package:moby_safe/Pages/mobsafety_header.dart';
+import 'package:moby_safe/services/rascunho_service.dart';
+import 'package:moby_safe/widgets/mobsafety_header.dart';
 
 class FinalizarInspecaoPage extends StatefulWidget {
   const FinalizarInspecaoPage({super.key});

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:moby_safe_estagio/widgets/mobsafety_header.dart';
-import 'package:moby_safe_estagio/pages/relatorio_detalhado_page.dart';
-import 'package:moby_safe_estagio/services/rascunho_service.dart';
+import 'package:moby_safe/Pages/mobsafety_header.dart';
+import 'package:moby_safe/widgets/mobsafety_header.dart';
+import 'package:moby_safe/pages/relatorio_detalhado_page.dart';
+import 'package:moby_safe/services/rascunho_service.dart';
 
 /// Página para registrar coletas pontuais durante a inspeção.
 /// Não usa plugins externos; as "fotos" são simuladas como URLs/textos

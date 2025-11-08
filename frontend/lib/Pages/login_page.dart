@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:moby_safe/core/api_config.dart';
 import 'package:moby_safe/Pages/register_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,151 +22,140 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        minimum: const EdgeInsets.all(24),
-        child: Center(
-          child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 400, // mantém tudo compacto no centro, estilo mockup
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _LoginHeaderClipper(),
+                child: Container(
+                  height: 350,
+                  width: double.infinity,
+                  color: const Color(0xFF122747),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('logo_mobi_safe.png', height: 110),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Bem vindo',
+                        style: TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Conecte para continuar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Marca + subtítulo, exatamente como no PDF
-                  const Text(
-                    'MobSafety',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Inspeção de Segurança Viária',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Mensagem de boas-vindas
-                  const Text(
-                    'Bem vindo\nConecte para continuar',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Campo E-mail
-                  TextField(
-                    controller: emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Campo Senha
-                  TextField(
-                    controller: senhaCtrl,
-                    obscureText: !showPass,
-                    decoration: InputDecoration(
-                      labelText: 'Senha',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            showPass = !showPass;
-                          });
-                        },
-                        icon: Icon(
-                          showPass ? Icons.visibility_off : Icons.visibility,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'E-mail',
+                        filled: true,
+                        fillColor: Colors.grey.shade300,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Botão ENTRAR
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: isLoading ? null : _login,
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: senhaCtrl,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        hintText: 'Senha',
+                        filled: true,
+                        fillColor: Colors.grey.shade300,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _onForgotPassword,
+                        child: const Text('Esqueci a senha',
+                        style: TextStyle(color: Colors.black)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF151A17),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: isLoading ? null : _onLoginPressed,
+                        child: isLoading
+                            ? const CircularProgressIndicator(
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : const Text(
+                                'ENTRAR',
+                                style: TextStyle(color: Colors.white),
                               ),
-                            )
-                          : const Text(
-                              'ENTRAR',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // "Esqueci a senha"
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordPage(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Esqueci a senha',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-
-                  // "Criar conta"
-                  // Adicione este botão abaixo do "Esqueci a senha"
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const RegisterPage()),
-                      );
-                    },
-                    child: const Text('Criar conta'),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                    const SizedBox(height: 24),
+                    Center(
+                      child: TextButton(
+                        onPressed: _onCreateAccount,
+                        child: const Text('Criar conta',
+                        style: TextStyle(color: Colors.black)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  void _onLoginPressed() {
+    _login(); // mantém seu fluxo de login atual
+  }
+
+  void _onForgotPassword() {
+    // navegação/ação de recuperação de senha (ajuste conforme seu app)
+  }
+
+  void _onCreateAccount() {
+    Navigator.pushNamed(context, '/register'); // ou navegue para sua RegisterPage
   }
 
   bool isLoading = false;
@@ -202,6 +192,9 @@ class _LoginPageState extends State<LoginPage> {
             const SnackBar(content: Text('Resposta inválida do servidor')),
           );
         } else {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', token);
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const MenuPrincipalPage()),
@@ -227,4 +220,24 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) setState(() => isLoading = false);
     }
   }
+}
+
+class _LoginHeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height);
+    path.quadraticBezierTo(
+      size.width * 0.9,
+      size.height * 0.9,
+      size.width  ,
+      size.height * 0.58,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

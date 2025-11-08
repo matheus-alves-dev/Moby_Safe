@@ -10,11 +10,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false, // oculta o banner DEBUG
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const LoginPage(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+      },
     );
   }
 }
