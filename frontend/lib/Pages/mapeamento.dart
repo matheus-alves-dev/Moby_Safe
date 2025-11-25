@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:moby_safe/Pages/mobsafety_header.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:moby_safe/core/api_config.dart';
 
 class MapeamentoPage extends StatefulWidget {
   const MapeamentoPage({super.key});
@@ -13,6 +16,8 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
   String auditorNome = 'Fulano de tal';
   String nomeDaVia = 'Ex: Rua ....';
   String extensaoTrecho = 'XXX metros';
+  int? mapeamentoId;
+  bool salvando = false;
 
   String _formatDate(DateTime? d) {
     if (d == null) return '__ / __ / ____';
@@ -23,6 +28,7 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
   }
 
   Future<void> _editarData() async {
+    if (!mounted) return;
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -30,7 +36,7 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => dataInspecao = picked);
     }
   }
@@ -40,6 +46,7 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
     required String valorAtual,
     required ValueChanged<String> onSave,
   }) async {
+    if (!mounted) return;
     final ctrl = TextEditingController(text: valorAtual);
     await showDialog<void>(
       context: context,
@@ -65,6 +72,80 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
       ),
     );
     ctrl.dispose();
+  }
+
+  Future<void> _salvar() async {
+    if (!mounted) return;
+    try {
+      setState(() => salvando = true);
+      final baseUrl = apiBaseUrl();
+      final payload = _payload();
+      final r = await http.post(
+        Uri.parse('$baseUrl/mapeamentos'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+      if (!mounted) return;
+      if (r.statusCode == 201) {
+        final data = jsonDecode(r.body) as Map<String, dynamic>;
+        setState(() => mapeamentoId = data['id'] as int);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Salvo')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: ${r.statusCode}')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao salvar')));
+      }
+    } finally {
+      if (mounted) setState(() => salvando = false);
+    }
+  }
+
+  Future<void> _atualizar() async {
+    if (mapeamentoId == null) return;
+    if (!mounted) return;
+    try {
+      setState(() => salvando = true);
+      final baseUrl = apiBaseUrl();
+      final payload = _payload();
+      final r = await http.put(
+        Uri.parse('$baseUrl/mapeamentos/$mapeamentoId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+      if (!mounted) return;
+      if (r.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Atualizado')));
+      } else if (r.statusCode == 404) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro não encontrado')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: ${r.statusCode}')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao atualizar')));
+      }
+    } finally {
+      if (mounted) setState(() => salvando = false);
+    }
+  }
+
+  String? _toSqlDate(DateTime? d) {
+    if (d == null) return null;
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yyyy = d.year.toString().padLeft(4, '0');
+    return '$yyyy-$mm-$dd';
+  }
+
+  Map<String, dynamic> _payload() {
+    return {
+      'data_inspecao': _toSqlDate(dataInspecao),
+      'auditor_nome': auditorNome,
+      'nome_via': nomeDaVia,
+      'extensao_trecho': extensaoTrecho,
+    };
   }
 
   Widget _editButton(VoidCallback onTap) {
@@ -129,14 +210,7 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: MobSafetyAppBar.build(context),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pop(context),
-        label: const Text('X'),
-        backgroundColor: const Color(0xFF0E2A43),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
+
       body: SafeArea(
         minimum: const EdgeInsets.all(24),
         child: SingleChildScrollView(
@@ -156,29 +230,12 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      child: const Center(
-                        child: FlutterLogo(size: 36), // placeholder do logo
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text(
-                      'Mapeamento',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Mapeamento',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -231,6 +288,24 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
                       },
                     );
                   },
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    FilledButton(
+                      onPressed: salvando
+                          ? null
+                          : () async {
+                              if (mapeamentoId == null) {
+                                await _salvar();
+                              } else {
+                                await _atualizar();
+                              }
+                            },
+                      child: Text(mapeamentoId == null ? 'Salvar' : 'Atualizar'),
+                    ),
+
+                  ],
                 ),
               ],
             ),
