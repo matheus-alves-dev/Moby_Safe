@@ -3,6 +3,8 @@ import 'package:moby_safe/Pages/mobsafety_header.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:moby_safe/core/api_config.dart';
+import 'package:moby_safe/Pages/analise_inicial.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MapeamentoPage extends StatefulWidget {
   const MapeamentoPage({super.key});
@@ -90,6 +92,10 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
         final data = jsonDecode(r.body) as Map<String, dynamic>;
         setState(() => mapeamentoId = data['id'] as int);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Salvo')));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PontoInicialPage()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: ${r.statusCode}')));
       }
@@ -254,7 +260,12 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
                       titulo: 'Nome do auditor(a)',
                       valorAtual: auditorNome,
                       onSave: (v) {
-                        if (v.isNotEmpty) setState(() => auditorNome = v);
+                        if (v.isNotEmpty) {
+                          setState(() => auditorNome = v);
+                          SharedPreferences.getInstance().then((prefs) {
+                            prefs.setString('auditor_nome', v);
+                          });
+                        }
                       },
                     );
                   },

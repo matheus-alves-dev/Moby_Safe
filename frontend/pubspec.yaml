@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.5.0
   shared_preferences: ^2.5.3
+  pdf: ^3.11.3
+  printing: ^5.14.2
 
 dev_dependencies:
   flutter_test:
@@ -91,3 +93,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
   assets:
     - assets/logo_mobi_safe.png
+    - assets/gps_app.png
