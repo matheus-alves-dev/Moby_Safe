@@ -3,6 +3,10 @@ import 'package:moby_safe/Pages/mobsafety_header.dart';
 import 'package:printing/printing.dart';
 import 'package:moby_safe/services/relatorio_pdf_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:moby_safe/core/api_config.dart';
+import 'dart:typed_data';
 
 class Question {
   final String code;
@@ -114,6 +118,34 @@ class _PavimentosPistaRolamentoPageState extends State<PavimentosPistaRolamentoP
 
   String _sectionNumber(String code) => code.split('.').first;
 
+  Future<void> _uploadPdfToServer(Uint8List bytes, {String? autorNome}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final baseUrl = apiBaseUrl();
+      final req = http.MultipartRequest('POST', Uri.parse('$baseUrl/relatorios'));
+      if (token != null) req.headers['Authorization'] = 'Bearer $token';
+      req.fields['titulo'] = 'Relatório de Inspeção';
+      if (autorNome != null && autorNome.isNotEmpty) {
+        req.fields['autor_nome'] = autorNome;
+      }
+      final mid = prefs.getInt('mapeamento_id');
+      if (mid != null) {
+        req.fields['mapeamento_id'] = mid.toString();
+      }
+      req.files.add(http.MultipartFile.fromBytes(
+        'arquivo',
+        bytes,
+        filename: 'relatorio_mobsafety.pdf',
+        contentType: MediaType('application', 'pdf'),
+      ));
+      final resp = await req.send();
+      if (resp.statusCode != 201 && resp.statusCode != 200) {
+        throw Exception('Falha ao salvar (${resp.statusCode})');
+      }
+    } catch (_) {}
+  }
+
   Future<void> _exportarPdf() async {
     final itens = <Map<String, String>>[];
     for (int i = 0; i < questions.length; i++) {
@@ -131,9 +163,10 @@ class _PavimentosPistaRolamentoPageState extends State<PavimentosPistaRolamentoP
     final prefs = await SharedPreferences.getInstance();
     final autorNome = prefs.getString('auditor_nome');
     final bytes = await RelatorioPdfService.gerarPdf(itens, autorNome: autorNome);
+    await _uploadPdfToServer(bytes, autorNome: autorNome);
     await Printing.sharePdf(bytes: bytes, filename: 'relatorio_mobsafety.pdf');
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Relatório PDF gerado')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Relatório PDF gerado e salvo')));
       Navigator.pop(context);
     }
   }

@@ -91,6 +91,8 @@ class _MapeamentoPageState extends State<MapeamentoPage> {
       if (r.statusCode == 201) {
         final data = jsonDecode(r.body) as Map<String, dynamic>;
         setState(() => mapeamentoId = data['id'] as int);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('mapeamento_id', mapeamentoId!);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Salvo')));
         Navigator.push(
           context,
